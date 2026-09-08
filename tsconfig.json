@@ -1,0 +1,29 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // Makes arr[i] and obj[key] resolve to T | undefined. Catches the class of
+    // bug where a lookup miss flows on as a real value — which in a sync engine
+    // means silently writing undefined over a user's row.
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
+  ],
+  // Tests are checked by tsconfig.test.json, which is the only program that
+  // sees @types/node. Keeping Node's globals out of the app program means
+  // Buffer/process cannot typecheck here and then crash on device.
+  "exclude": ["node_modules", "**/*.test.ts", "supabase"]
+}

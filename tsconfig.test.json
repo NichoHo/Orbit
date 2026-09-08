@@ -1,0 +1,21 @@
+// Test-only program. Deliberately separate from tsconfig.json so @types/node is
+// NOT visible to app code.
+//
+// If the app program could see Node's globals, `Buffer`, `process`, and friends
+// would typecheck happily and then throw on device — the same class of bug as
+// Array.prototype.with() passing in Node and crashing in Hermes (blueprint §5.7).
+// The app must only typecheck against what Hermes actually provides.
+//
+// Includes only *.test.ts; TypeScript pulls in whatever they import.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  // Reset: the base config excludes **/*.test.ts, and `exclude` is inherited,
+  // so without this the test program has no inputs at all.
+  "exclude": ["node_modules"],
+  "include": ["src/**/*.test.ts"]
+}
