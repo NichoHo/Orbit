@@ -52,7 +52,7 @@ async function fetchTasks(): Promise<Task[]> {
   
   const tasks = unwrap(res);
   const pendingCount = tasks.filter((t) => !t.completed_at).length;
-  widgetStore.set('pending_tasks_count', pendingCount);
+  await widgetStore.set('pending_tasks_count', String(pendingCount));
   
   return tasks;
 }
@@ -78,8 +78,8 @@ async function softDeleteTask({ id }: { id: string }): Promise<Task> {
 }
 
 /**
- * Registered at module scope so a mutation restored from MMKV can find its
- * function again. A mutation persisted without a matching default is dropped
+ * Registered at module scope so a mutation restored from the persisted cache
+ * can find its function again. A mutation persisted without a matching default is dropped
  * silently on restart — the single most common way an "offline-first" app
  * loses writes.
  */

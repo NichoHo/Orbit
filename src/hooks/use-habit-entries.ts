@@ -34,7 +34,24 @@ async function fetchHabitEntries(): Promise<HabitEntry[]> {
 }
 
 async function upsertHabitEntry(input: HabitEntryInput): Promise<HabitEntry> {
-  const res = await supabase.from('habit_entries').upsert(input).select().single();
+  // Default upsert only resolves conflicts on the primary key (id), but the
+  // client always mints a fresh id on check. Re-checking a day that was
+  // unchecked earlier then collides with that old (soft-deleted) row on the
+  // table's real natural key and throws 23505 — the "checkbox reverts by
+  // itself" bug. Target the natural key so re-checking revives that row.
+  //
+  // deleted_at isn't part of HabitEntryInput, so upsert's generated
+  // DO UPDATE SET never touched it — a "revived" row kept its old
+  // soft-deleted timestamp despite the request succeeding with no error.
+  // The optimistic UI showed checked, then the realtime echo of that
+  // still-deleted row filtered it back out: the same bug, one layer deeper.
+  // Verified both failure modes and this fix directly against the database
+  // before landing it. Explicit here so a future field never papers over it.
+  const res = await supabase
+    .from('habit_entries')
+    .upsert({ ...input, deleted_at: null }, { onConflict: 'habit_id,entry_date' })
+    .select()
+    .single();
   return unwrap(res);
 }
 

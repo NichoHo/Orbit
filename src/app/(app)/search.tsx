@@ -13,7 +13,10 @@ export default function SearchScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="px-4 py-2 border-b border-gray-200 flex-row items-center">
         <TextInput
-          className="flex-1 h-10 bg-gray-100 rounded-lg px-3 text-base text-gray-900"
+          // fontSize in style, not the text-base className — avoids the iOS
+          // lineHeight clip on focus (see sign-in.tsx).
+          style={{ fontSize: 16 }}
+          className="flex-1 h-10 bg-gray-100 rounded-lg px-3 text-gray-900"
           placeholder="Search tasks..."
           value={query}
           onChangeText={setQuery}

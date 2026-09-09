@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    // Reads the persisted session out of MMKV. Resolves offline.
+    // Reads the persisted session out of storage. Resolves offline.
     void supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       setSession(data.session);
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Without this the next account on this device sees the previous user's
         // data. From Phase 2 on, this also discards queued writes — the caller
         // must confirm first when the sync queue is non-empty (blueprint §5.8).
-        clearLocalData();
+        await clearLocalData();
       },
     }),
     [session, loading],

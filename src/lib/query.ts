@@ -54,27 +54,27 @@ export const queryClient = new QueryClient({
 });
 
 /**
- * MMKV is synchronous, so persistence costs no await and the cache is on disk
- * before the next frame — which is what makes a force-quit safe.
+ * ponytail: AsyncStorage is async (see storage.ts), so persistence no longer
+ * lands before the next frame — a force-quit right after a write can lose it.
  */
 export const persister: Persister = {
-  persistClient: (client) => {
-    cacheStore.set('cache', JSON.stringify(client));
+  persistClient: async (client) => {
+    await cacheStore.set('cache', JSON.stringify(client));
   },
-  restoreClient: () => {
-    const raw = cacheStore.getString('cache');
+  restoreClient: async () => {
+    const raw = await cacheStore.getString('cache');
     if (!raw) return undefined;
     try {
       return JSON.parse(raw);
     } catch {
       // A truncated write (killed mid-persist) must not brick startup.
       // Losing the cache is recoverable; failing to boot is not.
-      cacheStore.remove('cache');
+      await cacheStore.remove('cache');
       return undefined;
     }
   },
-  removeClient: () => {
-    cacheStore.remove('cache');
+  removeClient: async () => {
+    await cacheStore.remove('cache');
   },
 };
 

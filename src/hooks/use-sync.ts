@@ -19,7 +19,7 @@ export type SyncState =
   | { kind: 'syncing' }
   /** Expected, not an error. The writes are safe; say so. */
   | { kind: 'offline'; queued: number }
-  /** Queue is intact in MMKV and replays after re-auth. Do NOT sign out. */
+  /** Queue is intact locally and replays after re-auth. Do NOT sign out. */
   | { kind: 'auth-required'; queued: number }
   /** Retries exhausted. The only state where work is genuinely at risk. */
   | { kind: 'failed'; queued: number };
@@ -33,7 +33,7 @@ export type SyncState =
  * user_id in the WHERE clause.
  */
 async function deltaPull(): Promise<void> {
-  const since = metaStore.getString('last_sync_at') ?? '1970-01-01T00:00:00.000Z';
+  const since = (await metaStore.getString('last_sync_at')) ?? '1970-01-01T00:00:00.000Z';
 
   // Five-minute overlap: a transaction can commit after a later-timestamped one,
   // so a strict cursor can skip rows. Re-pulling costs nothing because
@@ -56,7 +56,7 @@ async function deltaPull(): Promise<void> {
     queryClient.setQueryData(HABIT_ENTRIES_KEY, (old: any = []) => mergeById(old, habitEntries.data));
   }
 
-  metaStore.set('last_sync_at', new Date().toISOString());
+  await metaStore.set('last_sync_at', new Date().toISOString());
 }
 
 function useOnline(): boolean {

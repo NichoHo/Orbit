@@ -30,7 +30,7 @@ export function SyncBanner({ state }: { state: SyncState }) {
     );
   }
 
-  // Queue is intact in MMKV. Route to sign-in; do NOT sign out, which would
+  // Queue is intact locally. Route to sign-in; do NOT sign out, which would
   // clear the cache and destroy exactly the writes we are trying to save.
   if (state.kind === 'auth-required') {
     return (

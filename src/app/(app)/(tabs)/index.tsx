@@ -1,19 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMutationState } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo, useRef } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AddTaskRow, type AddTaskRowHandle } from '@/components/add-task-row';
 import { TaskRow } from '@/components/task-row';
 import { DailySummaryBanner } from '@/components/daily-summary-banner';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,12 +20,17 @@ import {
 } from '@/hooks/use-tasks';
 import { exportTasksToCSV } from '@/lib/export';
 
+const ADD_ROW = { id: '__add-row__' } as const;
+type Row = Task | typeof ADD_ROW;
+
 export default function TasksScreen() {
   const { session, signOut } = useAuth();
   const { data: tasks = [], isLoading } = useTasks();
   const upsert = useUpsertTask();
   const remove = useSoftDeleteTask();
-  const [title, setTitle] = useState('');
+
+  const listRef = useRef<Animated.FlatList<Row>>(null);
+  const addRowRef = useRef<AddTaskRowHandle>(null);
 
   // Reactive, unlike reading the mutation cache directly — the dot has to
   // disappear when the write lands.
@@ -43,13 +41,17 @@ export default function TasksScreen() {
     }).filter((id): id is string => Boolean(id)),
   );
 
-  function add() {
-    const trimmed = title.trim();
-    if (!trimmed || !session) return;
-    upsert.mutate({ id: newTaskId(), user_id: session.user.id, title: trimmed });
-    // Cleared immediately. The row is already on screen; making the user wait
-    // on a round trip here is the exact thing this architecture exists to avoid.
-    setTitle('');
+  // Open tasks first, then the add row, then completed — the add row always
+  // sits at the boundary instead of getting buried under finished work.
+  const { rows, addRowIndex } = useMemo(() => {
+    const open = tasks.filter((t) => !t.completed_at);
+    const done = tasks.filter((t) => t.completed_at);
+    return { rows: [...open, ADD_ROW, ...done] as Row[], addRowIndex: open.length };
+  }, [tasks]);
+
+  function addTask(title: string) {
+    if (!session) return;
+    upsert.mutate({ id: newTaskId(), user_id: session.user.id, title });
   }
 
   function toggle(task: Task) {
@@ -57,6 +59,14 @@ export default function TasksScreen() {
       ...toInput(task),
       completed_at: task.completed_at ? null : new Date().toISOString(),
     });
+  }
+
+  function focusAddRow() {
+    listRef.current?.scrollToIndex({ index: addRowIndex, animated: true, viewPosition: 0.5 });
+    // ponytail: fixed delay instead of listening for scroll-end — good enough
+    // for a short in-app list; swap for an onMomentumScrollEnd callback if
+    // longer lists ever make the scroll outlast this.
+    setTimeout(() => addRowRef.current?.focus(), 300);
   }
 
   function confirmSignOut() {
@@ -89,7 +99,7 @@ export default function TasksScreen() {
             accessibilityLabel="Export tasks"
             className="min-h-11 min-w-11 items-center justify-center"
           >
-            <Text className="text-sm text-green-600 dark:text-green-400 font-medium">Export</Text>
+            <Ionicons name="share-outline" size={22} color="#16a34a" />
           </Pressable>
           <Pressable
             onPress={() => router.push('/search')}
@@ -97,7 +107,7 @@ export default function TasksScreen() {
             accessibilityLabel="Search tasks"
             className="min-h-11 min-w-11 items-center justify-center"
           >
-            <Text className="text-sm text-blue-600 dark:text-blue-400 font-medium">Search</Text>
+            <Ionicons name="search" size={22} color="#2563eb" />
           </Pressable>
           <Pressable
             onPress={confirmSignOut}
@@ -115,54 +125,42 @@ export default function TasksScreen() {
       {isLoading && tasks.length === 0 ? (
         <ActivityIndicator className="mt-8" />
       ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(t) => t.id}
+        <Animated.FlatList
+          ref={listRef}
+          data={rows}
+          keyExtractor={(row) => row.id}
           keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <Text className="px-4 pt-8 text-center text-neutral-400">
-              Nothing yet. Add your first task below.
-            </Text>
+          itemLayoutAnimation={LinearTransition.duration(250)}
+          onScrollToIndexFailed={(info) => {
+            listRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: true,
+            });
+            setTimeout(() => focusAddRow(), 100);
+          }}
+          renderItem={({ item }) =>
+            'user_id' in item ? (
+              <TaskRow
+                task={item}
+                pending={pendingIds.has(item.id)}
+                onToggle={() => toggle(item)}
+                onPress={() => router.push(`/task/${item.id}`)}
+              />
+            ) : (
+              <AddTaskRow ref={addRowRef} onSubmit={addTask} />
+            )
           }
-          renderItem={({ item }) => (
-            <TaskRow
-              task={item}
-              pending={pendingIds.has(item.id)}
-              onToggle={() => toggle(item)}
-              onPress={() => router.push(`/task/${item.id}`)}
-            />
-          )}
         />
       )}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      <Pressable
+        onPress={focusAddRow}
+        accessibilityRole="button"
+        accessibilityLabel="Add a task"
+        className="absolute bottom-6 right-5 h-14 w-14 items-center justify-center rounded-full bg-blue-600 shadow-lg shadow-black/30"
       >
-        <View className="flex-row items-center gap-2 border-t border-neutral-100 px-4 py-3 dark:border-neutral-900">
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            onSubmitEditing={add}
-            placeholder="Add a task"
-            accessibilityLabel="New task title"
-            returnKeyType="done"
-            blurOnSubmit={false}
-            className="min-h-11 flex-1 rounded-xl bg-neutral-100 px-4 text-base text-neutral-900 dark:bg-neutral-900 dark:text-neutral-50"
-          />
-          <Pressable
-            onPress={add}
-            disabled={!title.trim()}
-            accessibilityRole="button"
-            accessibilityLabel="Add task"
-            className="min-h-11 min-w-11 items-center justify-center rounded-xl bg-neutral-900 px-4 disabled:opacity-40 dark:bg-neutral-50"
-          >
-            <Text className="text-base font-semibold text-white dark:text-neutral-900">
-              Add
-            </Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
+        <Ionicons name="add" size={28} color="#fff" />
+      </Pressable>
 
       {remove.isError && (
         <Text className="px-4 pb-2 text-xs text-red-600">Could not delete that task.</Text>

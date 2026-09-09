@@ -1141,29 +1141,6 @@ Deno.serve(async (req) => {
 
 > Verify the current model ID and pricing at build time rather than trusting this file. The provider is one URL and one header — swapping to OpenAI or Gemini is a localized change.
 
-### 7.4 `decompose-task`
-
-Takes a goal, returns atomic subtasks with time estimates. Insert them as `tasks` rows with `parent_id` set — no new table, the existing self-reference covers it.
-
-Use the provider's structured-output / tool-calling mode rather than parsing prose. Then validate anyway:
-
-```ts
-const subtasks = parsed.subtasks
-  .filter((s) => typeof s.title === 'string' && s.title.trim().length > 0)
-  .slice(0, 12)                                    // cap regardless of what came back
-  .map((s) => ({
-    id: crypto.randomUUID(),
-    user_id: user.id,
-    parent_id: goalTaskId,
-    title: s.title.trim().slice(0, 500),
-    estimated_min: Number.isFinite(s.estimated_min)
-      ? Math.min(Math.max(1, s.estimated_min), 480)
-      : null,
-  }));
-```
-
-Model output is untrusted input. It gets validated at the boundary like any other.
-
 ### 7.5 Scheduled summaries
 
 ```sql
@@ -1220,7 +1197,6 @@ supabase/
     _shared/{client,limit}.ts
     daily-summary/index.ts
     daily-summary-batch/index.ts
-    decompose-task/index.ts
 app.json
 eas.json
 ```

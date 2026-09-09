@@ -20,12 +20,9 @@ if (!url || !publishableKey) {
 export const supabase = createClient<Database>(url, publishableKey, {
   auth: {
     storage: {
-      getItem: (key) => sessionStore.getString(key) ?? null,
+      getItem: (key) => sessionStore.getString(key),
       setItem: (key, value) => sessionStore.set(key, value),
-      // react-native-mmkv v4 renamed delete() to remove().
-      removeItem: (key) => {
-        sessionStore.remove(key);
-      },
+      removeItem: (key) => sessionStore.remove(key),
     },
     autoRefreshToken: true,
     persistSession: true,

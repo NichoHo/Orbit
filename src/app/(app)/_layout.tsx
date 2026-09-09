@@ -28,6 +28,7 @@ export default function AppLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="task/[id]" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
       </Stack>
     </View>
   );
