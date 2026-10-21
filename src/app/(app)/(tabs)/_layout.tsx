@@ -29,8 +29,9 @@ export default function TabLayout() {
           // disappearing into it.
           backgroundColor: dark ? '#0a0a0a' : '#ffffff',
           borderTopColor: dark ? '#171717' : '#f5f5f5',
-          // Web's default 49px bar clips the label under a 26px icon; equal top and bottom padding keeps it centred.
-          ...(Platform.OS === 'web' && { height: 64, paddingTop: 8, paddingBottom: 8 }),
+          // Web's default 49px bar clips the label under a 26px icon. A tab needs ~52px, so
+          // 64 - 2*6 fits it with equal space above the icon and below the label.
+          ...(Platform.OS === 'web' && { height: 64, paddingTop: 6, paddingBottom: 6 }),
         },
       }}
     >
