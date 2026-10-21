@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 const ACTIVE = '#2563eb';
 const INACTIVE = '#a3a3a3';
@@ -29,6 +29,8 @@ export default function TabLayout() {
           // disappearing into it.
           backgroundColor: dark ? '#0a0a0a' : '#ffffff',
           borderTopColor: dark ? '#171717' : '#f5f5f5',
+          // Web's default 49px bar clips the label under a 26px icon.
+          ...(Platform.OS === 'web' && { height: 64, paddingBottom: 8 }),
         },
       }}
     >

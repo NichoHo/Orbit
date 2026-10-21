@@ -80,6 +80,16 @@ export default function SignInScreen() {
     if (verifyError) setError(verifyError.message);
   }
 
+  // Portfolio demo: a private, empty account per visitor, no email needed.
+  // Needs "Allow anonymous sign-ins" enabled in Supabase Auth settings.
+  async function tryDemo() {
+    setBusy(true);
+    setError(null);
+    const { error: anonError } = await supabase.auth.signInAnonymously();
+    setBusy(false);
+    if (anonError) setError(anonError.message);
+  }
+
   const onEmailStep = step === 'email';
 
   return (
@@ -171,6 +181,19 @@ export default function SignInScreen() {
               </Text>
             )}
           </Pressable>
+
+          {onEmailStep && (
+            <Pressable
+              onPress={() => void tryDemo()}
+              disabled={busy}
+              accessibilityRole="button"
+              className="min-h-14 items-center justify-center rounded-xl border-2 border-neutral-300 px-4 active:opacity-70 disabled:opacity-50 dark:border-neutral-700"
+            >
+              <Text className="text-base font-semibold text-neutral-900 dark:text-neutral-50">
+                Log in as guest
+              </Text>
+            </Pressable>
+          )}
 
           {!onEmailStep && (
             <>
