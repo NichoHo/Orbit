@@ -1,10 +1,11 @@
-# Free Supabase projects pause after 7 days with no activity. Run twice a week
-# so one missed or delayed run does not cause a pause.
+# Free Supabase projects pause when they see low database activity over 7 days.
+# Supabase says "a few user requests to the database each day" is enough, so
+# twice a week was not. Ping several times a day and fire a few queries per run.
 name: Supabase keep-alive
 
 on:
   schedule:
-    - cron: '0 6 * * 1,4'
+    - cron: '0 */8 * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,10 +14,13 @@ jobs:
     steps:
       - name: Query the database through PostgREST
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 \
-            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1" \
-            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY"
+          for table in profiles profiles profiles; do
+            curl --fail --silent --show-error --retry 3 --retry-delay 10 \
+              "$SUPABASE_URL/rest/v1/$table?select=id&limit=1" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY"
+            echo
+          done
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
